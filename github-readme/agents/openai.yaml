@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub README"
+  short_description: "Draft polished READMEs with screenshot assets"
+  default_prompt: "Use $github-readme to create a polished README.md for this repository."
