@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update Repo Docs"
+  short_description: "Maintain repository docs after work"
+  default_prompt: "Use $update-repo-docs to create or update the repository-local CHANGELOG.md, NOTES.md, and AGENTS.md after this coding task."
