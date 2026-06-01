@@ -1,0 +1,4 @@
+interface:
+  display_name: "Deep Research Report"
+  short_description: "Research and write long-form sourced reports"
+  default_prompt: "Use $deep-research-report to research a topic and produce a comprehensive sourced report."
