@@ -1,4 +1,0 @@
-interface:
-  display_name: "Subagent Planner"
-  short_description: "Plan and create focused Codex agents"
-  default_prompt: "Use $subagent-planner to create the optimal Codex agents for my task."
