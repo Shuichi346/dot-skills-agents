@@ -1,11 +1,20 @@
 # About Using Multi-Agent
 
-Please proceed using the registered custom agents at '/Users/user_name/.codex/agents' as needed.
+If necessary, please proceed using the custom agents registered in /Users/user-name/.codex/agents.
 
-Main is responsible for requirements understanding, design, decision-making, and integration.
-Use `explorer` for codebase investigation, `implementer` for implementation, `docs-researcher` for external specification research, `architect` for important design decisions, and `verifier` for independent verification after implementation.
-Use `security-reviewer` only when security boundaries are involved, and `mechanic` only for simple repetitive tasks.
+## Main Agent
+**main**: Responsible for orchestration. Handles requirements understanding, design, decision-making, and integration.
 
-Independent read-heavy investigations may be parallelized as needed.
-Do not run write agents concurrently; Main should integrate the results.
-Do not spin up unnecessary subagents for small tasks.
+### Sub-Agents
+- **explorer**: Used for codebase investigation
+- **implementer**: Used for implementation tasks
+- **docs-researcher**: Used for researching external specifications
+- **architect**: Used when critical design decisions are required
+- **verifier**: Used for independent verification after implementation
+- **security-reviewer**: Used only when security boundaries are involved
+- **mechanic**: Used only for simple, repetitive tasks
+
+## Operational Rules
+- Independent investigations (read-focused tasks) can be executed in parallel as needed
+- Simultaneous execution of write-based agents is prohibited. The main agent integrates the results.
+- Do not launch unnecessary sub-agents for small-scale tasks
