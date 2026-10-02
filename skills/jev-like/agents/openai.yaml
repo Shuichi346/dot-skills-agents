@@ -1,0 +1,4 @@
+interface:
+  display_name: "Jev-like"
+  short_description: "Classify and score with Jeff 2B; create JSON and spreadsheets"
+  default_prompt: "Use $jev-like with Jeff 2B to evaluate my selected files or records using my criteria, select choice, noul, or score for each question, and produce JSON results and a visual spreadsheet."

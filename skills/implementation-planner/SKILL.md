@@ -1,244 +1,81 @@
 ---
 name: implementation-planner
-description: Create precise, self-contained implementation plans for programming and software-engineering tasks, written for literal execution by AI coding agents such as Codex, Claude Code, Cursor Agent, or other LLM agents, and save the completed specification document as PLANS.md in the working directory. Use when the user asks for a plan, implementation plan, technical plan, project roadmap, task breakdown, phased execution plan, refactor plan, migration plan, or agent-ready specification before coding; includes mandatory clarification, research triggers, explicit agent roles, step dependencies, observable verification, phase gates, risk/recovery notes, and living-document progress sections.
+description: Create or revise a durable implementation plan such as PLANS.md for a substantial software change, with an executable design, dependency-ordered steps, acceptance evidence, and live progress. Use for a requested plan file or agent-ready specification; not ordinary same-chat planning or source implementation.
 ---
 
 # Implementation Planner
 
-## Overview
+Write a self-contained plan that another coding agent can implement and resume without rediscovering the user's intended result. Plan the complete requested scope, including an MVP when explicitly requested; never shrink required behavior to make implementation easier.
 
-Produce a specification document for an AI coding agent to execute. Do not implement code while using this skill unless the user separately asks for implementation after the plan.
+This skill authors the plan. Do not edit product source or begin implementation as part of planning. If the user also requested implementation, finish and save the plan, then continue with that authorized work; planning does not create an additional approval gate.
 
-Write as if the executing agent will follow the plan literally with no memory of the conversation. Eliminate ambiguity, use exact identifiers, and anchor verification on observable behavior.
+## Establish the contract
 
-## Required Output File
+Read applicable repository instructions, any existing target plan, and the source, tests, configuration, and current changes relevant to the task. Resolve knowable paths, interfaces, commands, and constraints from evidence. Research version-specific or uncertain dependencies in official documentation; include the execution-relevant facts and their source links in the plan.
 
-Save the completed plan as `PLANS.md` in the current working directory. A chat-only plan is incomplete unless the user explicitly requests chat output only.
+Separate explicit requirements, supported inferences, and material unknowns. Choose routine details from repository conventions. Ask a focused question only when an unresolved choice would materially change behavior, architecture, compatibility, data handling, operations, or acceptance. Continue independent planning work while awaiting an answer; do not silently settle the dependent decision.
 
-If `PLANS.md` already exists, read it before writing:
+Define the user-visible outcome, scope boundaries, relevant failure behavior, and observable completion conditions. Include operating qualities such as performance, privacy, accessibility, or recovery when the requested product needs them. Do not invent enterprise requirements or defer necessary behavior as future polish.
 
-- If it describes the same task, update it in place and preserve relevant living-document history.
-- If it describes an unrelated task, ask before overwriting it.
-- If the user explicitly asks for a new plan, replace the file with the new completed plan.
+User instructions take precedence over skill defaults. Carry forward the user's decisions and existing authorization. Separate work that can proceed from any action requiring new permission; a plan cannot grant that permission. Do not prescribe additional confirmation for already authorized actions.
 
-After saving, briefly report the absolute path to `PLANS.md` and whether any assumptions still need user review.
+## Write the executable design
 
-## Planning Workflow
+Use one coherent solution. Explain the components, interfaces, data flow, state, and important errors or edge cases that determine implementation. Give exact paths and identifiers where verified; distinguish proposed locations from existing ones. Avoid speculative function-level detail the executor can decide safely.
 
-### 1. Clarify Before Planning
+Assign stable implementation IDs such as `I1`, `I2`. For each step include:
 
-Before writing a plan, classify the available information:
+- **Outcome and location:** The concrete result and affected files, modules, or services.
+- **Action:** Required behavior and the design decisions needed to implement it.
+- **Dependencies:** Earlier IDs or `None`.
+- **Acceptance evidence:** A command, observation, or artifact inspection and its expected result.
+- **Risk and recovery, when relevant:** How to detect partial success and recover from migration, destructive work, or external side effects.
 
-- **Explicit**: Stated by the user.
-- **Inferable**: Reasonably deduced from the repository, task context, or conventional project structure.
-- **Unknown**: Not stated, not inferable, and required for a correct plan.
+Sequence steps by dependency. Phases describe construction order and meaningful checkpoints; they do not change the final scope. Use specialized agents only when authorized and independent roles would improve accuracy or coverage. A plan does not need fictional agent assignments.
 
-Ask focused questions when an unknown would force a guess about any agent-executed detail, including:
+## Design proportionate verification
 
-- Functional behavior: inputs, outputs, edge cases, domain rules.
-- Technical context: language, framework, runtime, package manager, project structure, existing conventions, shared utilities, database or ORM.
-- Scope boundaries: new feature vs modification vs refactor, out-of-scope work, CI/CD expectations.
-- Integration points: external APIs, authentication, authorization, permissions, latency, throughput, memory limits.
-- Deployment: runtime environment, configuration, migrations, rollback needs.
-- Agent environment: whether agents can run commands, whether they have full repository access, whether specialized agents will be used.
+Map required behavior to sufficient evidence. Prefer existing project commands and checks. Normally progress from static validation and build/type checking to a short realistic startup or critical-path smoke check, then only targeted tests needed for behavior those checks cannot establish. Combine overlapping checks. Focused tests may be part of an implementation step when they directly prove that step's behavior.
 
-When asking questions:
+For every planned check, state its command or manual flow, expected result, and prerequisites. Distinguish commands discovered in the repository from proposed ones. Explain inapplicable tiers rather than creating permanently pending checkboxes. Do not require new test files, frameworks, coverage targets, or wrapper infrastructure without a concrete verification need.
 
-- Group questions by category.
-- Number every question.
-- State why the answer matters.
-- Include a default assumption only when it is safe to proceed if the user does not correct it.
-- Stop after asking; do not produce a speculative plan.
+Use these local tool conventions when applicable and compatible with repository instructions:
 
-Proceed directly to planning only when the request is complete enough, or when remaining unknowns can be listed as safe assumptions at the top of the plan.
+- JavaScript/TypeScript: Prefer project-local `oxlint` and `typescript`, invoked through the existing package manager. Add an absent development tool only when needed for a required check or requested by the user; use the existing manifest and lockfile. No global installs or transient auto-downloads.
+- C-family: Use Homebrew LLVM through the prefix resolved by `brew --prefix llvm`.
+- Swift: Use toolchain `swift format` or `xcrun swift-format` and native build commands; do not install another formatter.
+- Python: Use installed `ruff` and `ty` where applicable. Rust: Use rustup-managed `cargo check` or `rustc`.
 
-### 2. Research When Accuracy Depends On It
+Plan finite time and output budgets for costly checks, concise success summaries, and focused failure diagnostics. Retain the default smoke/targeted-test budget of one initial execution plus two post-repair reruns per unit, including across interruptions. The user may explicitly change this budget; use a lower bound where cost or side effects require it. Do not plan open-ended repair loops or additional checks after sufficient acceptance evidence passes.
 
-Use web or documentation search before finalizing the plan when:
+Split expensive verification into meaningful units. Coding-to-testing transitions are progress checkpoints by default: update status and continue authorized verification. Include a return-to-user boundary only when the user requested staged execution, an applicable instruction requires it, or the next action needs permission or unavailable input. Record the reason for any required stop so the executor can distinguish it from a routine checkpoint.
 
-- The plan depends on a library API, CLI flag, framework behavior, or external service contract that is not already verified.
-- The plan targets version-specific behavior or a modern toolchain whose behavior may have changed.
-- A step would otherwise be Medium or High risk because of technical uncertainty that research can resolve.
-- The technology is unfamiliar or niche.
+## Save one authoritative tracker
 
-Embed researched facts directly in the plan in your own words. Citations are useful provenance, but never make the executing agent follow external links to understand the plan.
+Save `PLANS.md` in the working directory unless the user chose another path or chat-only output. Update an existing plan for the same task in place, preserving valid decisions and completion evidence. Ask before replacing an unrelated plan.
 
-### 3. Specify, Do Not Implement
+By default, put `## Progress Status` immediately after the title. If the user requests separate tracking or the plan must remain immutable, use `PROGRESS.md` beside it and identify that file as authoritative. Keep checkbox state in exactly one file.
 
-The plan describes what to build and how it should behave. The executing agent writes the code.
+The tracker contains meaningful planning milestones, each implementation ID, and applicable verification units. Use `[ ]` for pending, active, failed, or blocked work and `[x]` only for evidenced completion. Include `Current:` for the active item or blocker and `Next:` for the next dependency-safe action. Avoid redundant parent checkboxes unless grouping materially helps.
 
-Include:
+Mark only planning actually completed as done when delivering a new plan; future implementation and verification stay unchecked. When revising an existing plan, retain or correct completed items using current evidence. Set `Current:` and `Next:` accordingly.
 
-- Exact file paths, module names, endpoint paths, component names, function names, and command names.
-- Function signatures with complete type annotations when signatures matter.
-- Type definitions, schemas, data structures, constants, configuration values, and environment variable names.
-- Behavioral rules, concrete input/output examples, edge cases, error conditions, and failure modes.
-- Algorithms in prose or pseudocode.
-- Short code snippets only for non-obvious API usage, exact configuration, shell commands, or syntax that is easy to get wrong.
+Specify that the executor saves the tracker after each implementation step or independent verification unit. At the start, phase boundaries, and completion, show the full checklist; ordinary updates show only changed checkbox lines with `Current:` and `Next:`. Follow a user-requested shorter reporting format. Keep logs and command-by-command history out of the tracker.
 
-Do not include:
+## Plan shape and handoff
 
-- Full function implementations.
-- Full file contents for ordinary source files.
-- Boilerplate the framework can generate or the executing agent can infer safely.
-- Vague directives such as "handle errors appropriately", "add validation", or "follow best practices". Replace them with enumerated behaviors.
+Use only sections with material content. A typical plan contains:
 
-### 4. Assign Exactly One Agent Role Per Step
+1. Progress Status.
+2. Outcome, requirements, and scope boundaries.
+3. Current system evidence and relevant assumptions.
+4. Architecture and design.
+5. Implementation sequence with stable IDs and dependencies.
+6. Final verification with observable pass conditions and budgets.
+7. Material decisions, permission boundaries, and recovery details.
 
-Use only these role names:
+Check that every required behavior maps to implementation and acceptance evidence, dependencies are executable, and no unknown decision is disguised as a fact. Keep the specification stable during execution; change it when user direction or verified evidence requires a material revision. Routine progress updates do not change product scope.
 
-| Agent | Assign When |
-|---|---|
-| `coding-agent` | The step adds new behavior or writes new source code. |
-| `refactoring-agent` | The step restructures existing code without changing external behavior. |
-| `review-agent` | The step reviews code, checks plan compliance, performs static analysis, or runs verification. |
-| `devops-agent` | The step changes build, CI/CD, deployment, environment, Docker, scripts, package management, or infrastructure. |
-| `database-agent` | The step changes schema, migrations, seed data, queries, ORM configuration, or data-layer setup. |
-| `documentation-agent` | The step creates or updates documentation rather than executable code. |
-| `debug-agent` | The step diagnoses and fixes a specific known defect. |
+Add resumption details only when interruption or side effects require facts beyond the working tree: the remaining action, blockers, and necessary operation identifiers or safe-retry conditions. Leave narrative history and durable repository rules to repository documentation; do not invoke another documentation skill automatically.
 
-If choosing between `coding-agent` and `refactoring-agent`, ask whether the step adds behavior. If yes, use `coding-agent`; if no, use `refactoring-agent`.
-
-## Plan Structure
-
-Scale the plan to the task:
-
-- **Small task, about 1-5 steps**: Use Overview, Assumptions, Requirements, Steps, Verification, and Progress.
-- **Medium task, about 5-15 steps**: Use the standard phased format with all living-document sections.
-- **Large task, 15+ steps or major redesign**: Use the full phased format and add migration, rollback, performance, or security sections when relevant.
-
-For medium and large plans, use this structure:
-
-```markdown
-**Implementation Plan: [Feature or Project Name]**
-
-**Overview:**
-[2-3 sentences. State the user-visible outcome and how to see it working.]
-
-**Stated Assumptions:**
-1. [Assumption not explicitly confirmed by the user.]
-
-**Requirements:**
-1. [Verifiable pass/fail condition, preferably observable behavior.]
-
-**Tech Stack and Conventions:**
-[Language, framework, runtime, package manager, file naming, module patterns, known repository conventions.]
-
-**Boundaries:**
-✅ Always:
-- [Actions agents can take without asking.]
-
-⚠️ Ask First:
-- [Actions requiring human confirmation.]
-
-🚫 Never:
-- [Hard stops.]
-
-**Architecture Changes:**
-[Affected components, exact paths, before/after structure, or target directory tree.]
-
-**Agent Summary:**
-| Agent | Step Count | Phases Involved |
-|---|---:|---|
-| `coding-agent` | N | 1, 2 |
-
-**Implementation Steps:**
-[Phased steps, each phase ending with a Phase Gate.]
-
-**Risks and Mitigations:**
-1. Risk: [Concrete risk.]
-   Mitigation: [Concrete mitigation tied to a step.]
-
-**Success Criteria:**
-- [ ] [Observable final condition.]
-
-**Progress:**
-- [ ] Step 1.1: [Status detail.]
-
-**Decision Log:**
-- Decision: [Initial planning decision or "None yet".]
-  Rationale: [Why.]
-  Date: [YYYY-MM-DD or "Not started".]
-
-**Surprises & Discoveries:**
-- [None yet.]
-
-**Outcomes & Retrospective:**
-- [Not started.]
-```
-
-## Step Requirements
-
-Every implementation step must include these fields:
-
-- **Step ID**: Unique and dependency-addressable, such as `1.1`, `1.2`, or `2.G`.
-- **Agent**: Exactly one role from the allowed role list.
-- **Location**: Exact file path, module, service, component, endpoint, or repository area.
-- **Action**: Literal instruction the assigned agent can execute.
-- **Details**: Specifications needed to write correct code: signatures, types, data shapes, behavioral rules, examples, edge cases, pseudocode, and configuration.
-- **Dependencies**: Step IDs that must be complete first, or `None`.
-- **Verification**: Exact checks to perform and expected results.
-- **Complexity**: `Low`, `Medium`, or `High`.
-- **Risk**: `Low`, `Medium`, or `High`; explain any Medium or High rating.
-- **Idempotence & Recovery**: Required for Medium or High risk, and required for destructive work regardless of risk.
-
-Verification must include at least one observable behavior check unless the step is purely structural. Build, lint, or typecheck commands are useful baselines, but they are insufficient for user-visible behavior. Prefer checks such as:
-
-- Run a named test file and confirm a specific case passes.
-- Send a request to an endpoint and confirm status code and body.
-- Run a CLI command and confirm exact stdout, stderr, and exit code.
-- Interact with a UI path and confirm visible state.
-- Confirm a migration creates, updates, or rolls back a specific schema state.
-
-## Phase Gates
-
-Every phase must end with a Phase Gate step:
-
-- Use Step ID `N.G`.
-- Assign `Agent: review-agent`.
-- Depend on all steps in that phase.
-- Run exact build, lint, typecheck, test, or migration commands appropriate to the stack.
-- Include at least one observable behavior check demonstrating the phase purpose, unless the phase is purely structural.
-- State expected results with pass/fail precision.
-
-Each completed phase must leave the system buildable and in a coherent state.
-
-## Risk and Recovery Rules
-
-For any Medium or High risk step:
-
-- State whether the step is safely re-runnable after partial failure.
-- If safely re-runnable, explain why, such as idempotent file generation, `CREATE TABLE IF NOT EXISTS`, or atomic temp-file rename.
-- If not safely re-runnable, specify exact rollback or retry steps.
-
-For destructive operations, schema migrations, file deletions, deployments, or data rewrites:
-
-- Include a rollback path even if the risk is rated Low.
-- State exact files, commands, migration identifiers, backups, or deployment targets involved.
-- Mark operations that require human confirmation under `⚠️ Ask First`.
-
-## Living Document Rules
-
-Include these sections in every medium or large plan and instruct the executing agent to update them as work proceeds:
-
-- **Progress**: Checkbox list for every step and phase gate. Completed entries must include UTC timestamps, such as `(2026-05-01 14:30Z)`.
-- **Decision Log**: Non-trivial decisions, deviations from the plan, scope changes, and the rationale for each.
-- **Surprises & Discoveries**: Unexpected behavior, bugs, library quirks, evidence, and short log excerpts.
-- **Outcomes & Retrospective**: Milestone and final notes comparing actual outcome against the plan Overview.
-
-When revising a plan mid-execution, update Requirements, Steps, Progress, and Decision Log consistently.
-
-## Quality Bar
-
-Before delivering the plan, check that:
-
-- The completed plan has been saved to `PLANS.md` in the current working directory.
-- Every requirement maps to at least one step and one success criterion.
-- Every step has exact dependencies and no forward dependency references.
-- Every step has one agent role and one concern.
-- No step combines coding and review, or feature work and refactoring.
-- Verification includes observable behavior wherever behavior changes.
-- External facts needed by the executing agent are embedded in the plan.
-- File paths, function names, endpoints, commands, and data structures are exact where known.
-- Assumptions are explicitly listed and safe for the user to correct.
-- The plan is self-contained and does not rely on "as discussed above" or external documents for required facts.
+Report the saved plan and tracker paths, the checklist, the next action, and any material unresolved assumption concisely. Do not require `$execute-implementation-plan` for ordinary continuation in the same chat; it is useful for explicit plan-file execution or later resumption.

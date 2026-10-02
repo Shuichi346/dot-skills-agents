@@ -1,39 +1,29 @@
 ---
 name: github-readme
-description: Create or update polished English GitHub README.md files by analyzing a repository's source code, configuration, screenshots, and existing docs. Use when Codex is asked to draft repository documentation, explain what a library/app/tool does, write setup and usage instructions, add README screenshots, or organize GitHub README image assets in a githubreadme directory.
+description: Create or update a GitHub repository's README from source code and project documentation, including setup, usage, and supplied screenshot assets. Use for README authoring or edits, not general code explanations or unrelated documentation.
 ---
 
 # GitHub README
 
-## Workflow
+Produce a reader-ready README that explains the project and gives a practical path to using it. Default to English `README.md`; follow the user's requested language, file, and format when specified.
 
-1. Work from the repository root. Read project instructions first, then inspect the file tree, existing README files, package manifests, lockfiles, build scripts, examples, tests, and main entry points.
-2. Infer the project purpose, audience, feature set, tech stack, setup commands, run commands, test commands, configuration, and license only from evidence in the repository or current official sources.
-3. If screenshots or other images are attached or provided for README use, create `githubreadme/` in the repository root, copy the images there, and reference them from `README.md` with repository-relative links.
-4. Write or update only the English `README.md` unless the user explicitly asks for another file. Do not output JSON.
-5. Verify that local image links resolve and that all commands, paths, badges, and placeholders are intentional.
+## Scope and evidence
 
-## Screenshot Assets
+- Read project instructions. For a focused edit, inspect the relevant content; for a full README, start with existing docs, manifests, scripts, and entry points. Follow examples, tests, or CI as needed to establish reader-facing facts.
+- Complete the edit using evidence and reasonable editorial choices. Ask only when an unresolved choice materially changes the deliverable and cannot be inferred.
+- Preserve useful existing content and user edits. Limit changes to the requested README and necessary supplied image assets unless the user requests more.
+- Derive commands, requirements, configuration, and capabilities from the implementation. Resolve stale docs against scripts and source. Check official documentation for uncertain version-specific behavior, respecting pinned versions.
+- Do not invent project facts, including license, compatibility, services, or released features. Omit unsupported optional sections; state essential missing information plainly. Reserve editorial placeholders for requested templates or drafts.
 
-Use `scripts/stage_readme_images.py` when the user provides image file paths or local attachments that need to be copied into the repository:
+## Writing and layout
 
-```bash
-python3 /Users/shuichi/.codex/skills/github-readme/scripts/stage_readme_images.py --repo /path/to/repo --images /path/to/screenshot.png /path/to/second.jpg
-```
+Lead with the title, purpose, and audience. Include requirements, installation, and a concrete usage example where applicable. Add other sections only when supported and useful. Prefer one documented setup path unless the project requires multiple workflows.
 
-The script creates `githubreadme/`, copies supported image files with safe unique names, and prints README-ready image snippets with a fixed 480 pixel display width:
+Use plain language, descriptive headings, and concise prose. Use lists, tables, and a table of contents when they help readers. Avoid promotional claims and filler sections. Include badges only with verified targets and values.
 
-```markdown
-<img src="githubreadme/screenshot.png" alt="Screenshot" width="480">
-```
+For a new README or full refresh, use this language switch at the top when `README_ja.md` exists; otherwise omit the switch. Preserve existing working language navigation. A focused edit need not alter it, and adding navigation does not require creating a translation.
 
-Place screenshots where they help readers understand the project: near the overview for app/product screenshots, in Usage for workflows, or in a UI section for tours and feature introductions. Use `<img>` tags with `width="480"` for screenshots, descriptive alt text, and concise captions. Do not add decorative images that do not explain the repository.
-
-## README Structure
-
-Start the file with this exact language switch table:
-
-```markdown
+```html
 <table>
   <thead>
     <tr>
@@ -44,32 +34,20 @@ Start the file with this exact language switch table:
 </table>
 ```
 
-Then write a professional English README using the sections that fit the repository:
+## Screenshot assets
 
-- Project title
-- Badges, only when the values are known or can be safely derived
-- One-paragraph overview explaining what the repository is and who it is for
-- Screenshot or UI preview section, when image assets are available
-- Features
-- Tech stack
-- Requirements
-- Installation
-- Usage
-- Configuration or environment variables
-- Development workflow
-- Testing
-- Project structure, only when it helps orientation
-- Troubleshooting, only when repository evidence suggests common issues
-- Roadmap, only when an existing roadmap or TODO source exists
-- License
+Reuse suitable repository images. For supplied local images that need copying, use [scripts/stage_readme_images.py](scripts/stage_readme_images.py), resolving its path from this skill directory:
 
-Add a table of contents when the README becomes long enough that navigation helps.
+```bash
+python3 /path/to/github-readme/scripts/stage_readme_images.py --repo /path/to/repo --images "/path/to/App Preview.png"
+```
 
-## Accuracy Rules
+The helper copies images into `githubreadme/` with unique filenames and prints repository-relative `<img>` tags. Default to 480 pixels wide; use `--width` for a requested size. Keep any custom `--dir` inside the repository. Reuse staged files on subsequent edits.
 
-- Prefer exact commands from files such as `README.md`, `package.json`, `pyproject.toml`, `Makefile`, `justfile`, `Taskfile`, `Cargo.toml`, `Package.swift`, or CI workflows.
-- Search the web for current official documentation when commands or behavior depend on a library, framework, API, or tool version that may have changed.
-- Do not invent license terms, deployment targets, API keys, environment variable values, hosted URLs, maintainer names, support channels, or compatibility claims.
-- Use placeholders for important missing facts, for example `[Add license information]`, `[Describe required environment variables]`, or `[Add deployment instructions]`.
-- Keep the tone concrete and useful. Explain what the repository does before explaining how it is implemented.
-- Make the README understandable to someone seeing the repository for the first time.
+Inspect images before describing them. Place them near relevant content, with descriptive alt text and useful captions. If an attachment is inaccessible, complete the text and report the missing asset without inventing a path.
+
+## Verification and delivery
+
+Review the diff, local links and images, heading anchors, and command consistency. Run relevant documentation checks or a bounded example when useful and feasible. Prose or image-only edits do not by themselves require an application build, a full test suite, or new tests. Distinguish source-checked commands from executed commands.
+
+Finish after the edit and relevant checks. Briefly report changed files, validation, and unresolved facts or assets; repeat the README only if requested.

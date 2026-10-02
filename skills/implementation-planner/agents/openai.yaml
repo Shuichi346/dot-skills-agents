@@ -1,4 +1,4 @@
 interface:
   display_name: "Implementation Planner"
-  short_description: "Create execution-ready coding plans"
-  default_prompt: "Use $implementation-planner to create an execution-ready implementation plan for this programming task."
+  short_description: "Write executable plans with durable progress"
+  default_prompt: "Use $implementation-planner to create or revise PLANS.md for the complete requested scope, with dependency-ordered steps, live progress, and proportionate acceptance checks."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Execute Implementation Plan"
+  short_description: "Resume plans and verify completion with evidence"
+  default_prompt: "Use $execute-implementation-plan to execute or resume the named plan through its required acceptance checks, keeping progress current and respecting any user-requested stops."
