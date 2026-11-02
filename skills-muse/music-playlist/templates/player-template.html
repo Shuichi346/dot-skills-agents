@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>__PLAYLIST_TITLE__</title>
+<!--
+  Music playlist player template (music_playlist skill).
+  This file is the skill's SAMPLE (見本): the complete player HTML code,
+  kept in the skill WITHOUT any songs. The track catalog is only a
+  placeholder (__CATALOG_JSON__) and no audio is part of this file —
+  songs and catalog are injected at build time, per playlist, and are
+  never stored in the skill.
+
+  How a new playlist player is made from this sample:
+  1. Run scripts/make_catalog.py on the playlist folder to produce catalog.json.
+  2. Replace the __CATALOG_JSON__ placeholder below (inside the
+     <script id="catalog-data"> block) with that catalog JSON, and replace
+     __PLAYLIST_TITLE__ above with the playlist name.
+  3. Place the playlist's .m4a files as assets next to the page so that each
+     track's "file" value in the catalog resolves as a relative path.
+     The audio files are embedded bit-identical — never re-encode them.
+  4. Playlist-specific changes are limited to the catalog and the assets.
+     Any change to layout, features or behaviour is made HERE, in the
+     sample, so every future player inherits it.
+  5. Visual design: a warm paper palette with a dark counterpart,
+     Mincho headings, ruled list rows, crimson accent, rounded
+     gradient tiles and an accent-circle play button are baked into
+     the CSS below — the sample itself is the finished design, so
+     builds do not need a separate restyling pass. The now-playing
+     artwork is a vinyl record (grooved black disc, accent label
+     carrying the artist name, centre hole) that slowly spins while
+     playing. The queue uses number-and-rule rows with a pale
+     highlight and a red equalizer on the playing row, and the
+     now-playing screen carries a small group label at the top.
+  6. Icons are inline SVG only — NEVER emoji characters. Platform emoji
+     render as inconsistent coloured tiles on iOS/Android and break the
+     design. Transport icons are filled paths, utility icons are
+     stroked paths, all currentColor.
+
+  Catalog format:
+  {
+    "title": "プレイリスト名",
+    "filterKey": "album" | "artist",   // which field the filter chips group by
+    "tracks": [
+      {"file": "相対パス.m4a", "title": "曲名", "artist": "アーティスト名",
+       "album": "アルバム名（無ければ空文字）", "duration": 123.4}
+    ]
+  }
+-->
+<style>
+  :root{
+    --bg:#131110; --bg2:#1e1a17; --card:#211d1a; --line:#3a332c;
+    --text:#f2ede4; --sub:#a89f93; --accent:#e02341; --accent2:#ff7a68;
+    --mini-bg:rgba(33,29,26,.92);
+    --mini-h:68px;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f4f1ec; --bg2:#ece7de; --card:#fffdf9; --line:#ded4c4;
+      --text:#1d1a16; --sub:#7d7466; --accent:#c8102e; --accent2:#e5484d;
+      --mini-bg:rgba(255,253,249,.94);
+    }
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;}
+  button{font-family:inherit; color:inherit; background:none; border:none; cursor:pointer;}
+  input,select{font-family:inherit;}
+  svg{display:block;}
+  .mincho{font-family:"Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho","YuMincho","Noto Serif JP",serif;}
+
+  /* ---------- header ---------- */
+  header{padding:22px 16px 8px;}
+  header h1{font-family:"Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho","YuMincho","Noto Serif JP",serif;
+    font-size:27px; margin:0 0 4px; letter-spacing:.04em;}
+  header .meta{color:var(--sub); font-size:13px;}
+  .controls{padding:10px 16px 4px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;}
+  .search{flex:1 1 180px; display:flex; align-items:center; gap:6px; background:var(--card);
+    border:1px solid var(--line); border-radius:10px; padding:8px 10px;}
+  .search .sic{color:var(--sub); flex:0 0 auto;}
+  .search .sic svg{width:18px; height:18px;}
+  .search input{flex:1; background:none; border:none; outline:none; color:var(--text); font-size:15px; min-width:0;}
+  .search input::placeholder{color:var(--sub);}
+  .viewtoggle{display:flex; background:var(--card); border:1px solid var(--line); border-radius:10px; overflow:hidden;}
+  .viewtoggle button{padding:8px 14px; font-size:14px; color:var(--sub);}
+  .viewtoggle button.on{background:var(--accent); color:#fff;}
+  .sortsel{background:var(--card); color:var(--text); border:1px solid var(--line);
+    border-radius:10px; padding:8px 10px; font-size:14px;}
+  .chips{display:flex; gap:8px; overflow-x:auto; padding:10px 16px 4px; scrollbar-width:none;}
+  .chips::-webkit-scrollbar{display:none;}
+  .chip{flex:0 0 auto; padding:6px 14px; border-radius:999px; background:var(--card);
+    border:1px solid var(--line); color:var(--sub); font-size:13px; white-space:nowrap;}
+  .chip.on{background:var(--accent); border-color:var(--accent); color:#fff;}
+
+  /* ---------- track list (ruled rows) ---------- */
+  main{padding:6px 8px calc(var(--mini-h) + 28px + env(safe-area-inset-bottom));}
+  .grouphead{padding:18px 10px 6px; font-size:16px; font-weight:700; color:var(--text);
+    font-family:"Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho","YuMincho","Noto Serif JP",serif; letter-spacing:.03em;}
+  .grouphead .gsub{color:var(--sub); font-weight:400; font-size:12px; margin-left:8px;
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",system-ui,sans-serif;}
+  .row{display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+    padding:9px 10px; border-bottom:1px solid var(--line);}
+  .row:active{background:var(--bg2);}
+  .row.playing .rtitle{color:var(--accent2);}
+  .tile{flex:0 0 auto; width:48px; height:48px; border-radius:11px; display:flex;
+    align-items:center; justify-content:center; color:rgba(255,255,255,.92);
+    box-shadow:0 2px 8px rgba(0,0,0,.18);}
+  .tile svg{width:24px; height:24px;}
+  .rmeta{flex:1; min-width:0;}
+  .rtitle{font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .rsub{font-size:13px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .rdur{font-size:13px; color:var(--sub); flex:0 0 auto; font-variant-numeric:tabular-nums;}
+  .eq{flex:0 0 auto; display:none; gap:2px; align-items:flex-end; height:14px;}
+  .row.playing .eq{display:flex;}
+  .eq i{width:3px; background:var(--accent); border-radius:1px; animation:eq 0.9s ease-in-out infinite;}
+  .eq i:nth-child(2){animation-delay:.25s;} .eq i:nth-child(3){animation-delay:.5s;}
+  @keyframes eq{0%,100%{height:5px}50%{height:14px}}
+  .empty{padding:40px 16px; text-align:center; color:var(--sub); font-size:14px;}
+
+  /* ---------- mini player ---------- */
+  #mini{position:fixed; left:8px; right:8px; bottom:calc(8px + env(safe-area-inset-bottom));
+    height:var(--mini-h); background:var(--mini-bg); backdrop-filter:blur(14px);
+    border:1px solid var(--line); border-radius:14px; display:none; align-items:center;
+    gap:10px; padding:0 10px; z-index:20; box-shadow:0 8px 28px rgba(0,0,0,.28);}
+  #mini.show{display:flex;}
+  #mini .tile{width:44px; height:44px; border-radius:9px;}
+  #mini .tile svg{width:21px; height:21px;}
+  #mini .rmeta{cursor:pointer;}
+  #miniProgress{position:absolute; top:0; left:14px; right:14px; height:2px; background:var(--line); border-radius:1px;}
+  #miniProgress i{display:block; height:100%; width:0%; background:var(--accent); border-radius:1px;}
+  .mbtn{padding:8px; flex:0 0 auto; color:var(--text);}
+  .mbtn svg{width:24px; height:24px;}
+  .mbtn.main svg{width:30px; height:30px;}
+
+  /* ---------- now playing ---------- */
+  #np{position:fixed; inset:0; background:linear-gradient(180deg,var(--bg2),var(--bg));
+    z-index:30; display:none; flex-direction:column; padding:14px 22px calc(18px + env(safe-area-inset-bottom));
+    overflow-y:auto;}
+  #np.show{display:flex;}
+  #np .close{align-self:center; color:var(--sub); padding:2px 30px;}
+  #np .close svg{width:26px; height:26px;}
+  #npGroup{text-align:center; color:var(--sub); font-size:12px; letter-spacing:.22em; margin-top:2px;}
+  #npArt{width:min(72vw,320px); height:min(72vw,320px); margin:18px auto 22px; border-radius:50%;
+    position:relative; flex:0 0 auto;
+    background:repeating-radial-gradient(circle at 50% 50%, #17171a 0px, #17171a 2px, #232327 3px, #141416 4px);
+    box-shadow:0 18px 44px rgba(0,0,0,.4), inset 0 0 0 1px rgba(255,255,255,.06);}
+  #npArt.spin{animation:spin 9s linear infinite;}
+  @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion: reduce){ #npArt.spin{animation:none;} }
+  .np-label{position:absolute; top:50%; left:50%; width:37%; height:37%; transform:translate(-50%,-50%);
+    border-radius:50%; background:radial-gradient(circle at 38% 35%, var(--accent2), var(--accent) 70%);
+    display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden;
+    color:rgba(255,255,255,.92); font-size:10px; letter-spacing:.18em; line-height:1.6;
+    padding:11%; box-shadow:inset 0 0 0 1px rgba(255,255,255,.15);}
+  .np-hole{position:absolute; top:50%; left:50%; width:13px; height:13px; transform:translate(-50%,-50%);
+    border-radius:50%; background:var(--bg); box-shadow:inset 0 1px 3px rgba(0,0,0,.5);}
+  #npTitle{font-size:23px; font-weight:700; text-align:center; color:var(--text);
+    font-family:"Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho","YuMincho","Noto Serif JP",serif; letter-spacing:.03em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  #npSub{font-size:16px; color:var(--sub); text-align:center; margin-top:4px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .seek{margin:22px 0 2px;}
+  .seek input[type=range]{width:100%; accent-color:var(--accent);}
+  .times{display:flex; justify-content:space-between; font-size:12px; color:var(--sub); font-variant-numeric:tabular-nums;}
+  .npcontrols{display:flex; align-items:center; justify-content:space-between; margin:14px 6px 4px;}
+  .npcontrols button{padding:10px; color:var(--text); position:relative;}
+  .npcontrols button svg{width:27px; height:27px;}
+  .npcontrols .play{background:var(--accent); color:#fff; border-radius:50%;
+    width:78px; height:78px; padding:0; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 10px 26px rgba(0,0,0,.3);}
+  .npcontrols .play svg{width:34px; height:34px;}
+  .npcontrols button.on{color:var(--accent);}
+  #btnRepeat .bdg{position:absolute; top:0; right:-2px; font-size:10px; line-height:1;
+    background:var(--accent); color:#fff; border-radius:6px; padding:2px 4px; display:none;}
+  #btnRepeat.one .bdg{display:block;}
+  .vol{display:flex; align-items:center; gap:10px; margin:8px 0 4px; color:var(--sub);}
+  .vol .vic svg{width:20px; height:20px;}
+  .vol input[type=range]{flex:1; accent-color:var(--sub);}
+  .queuehead{margin:18px 0 6px; font-size:14px; font-weight:700; color:var(--sub);}
+  .qrow{display:flex; gap:10px; align-items:center; width:100%; text-align:left; padding:7px 6px;
+    border-bottom:1px solid var(--line);}
+  .qrow.now{background:rgba(224,35,65,.13);}
+  @media (prefers-color-scheme: light){ .qrow.now{background:rgba(200,16,46,.07);} }
+  .qrow .qnum{flex:0 0 auto; width:22px; text-align:center; color:var(--sub); font-size:13px; font-variant-numeric:tabular-nums;}
+  .qrow .eq{display:flex;}
+  .qrow.now .rtitle{color:var(--accent2);}
+  .qrow .rtitle{font-size:15px;} .qrow .rsub{font-size:12px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="plTitle"></h1>
+  <div class="meta" id="plMeta"></div>
+</header>
+
+<div class="controls">
+  <label class="search"><span class="sic" data-icon="search"></span><input id="q" type="search" placeholder="曲名・アーティストで検索"></label>
+  <div class="viewtoggle">
+    <button id="viewTracks" class="on">曲</button>
+    <button id="viewGroups">グループ</button>
+  </div>
+  <select class="sortsel" id="sortSel">
+    <option value="order">グループ順</option>
+    <option value="title">タイトル順</option>
+    <option value="duration">長さ順</option>
+  </select>
+</div>
+
+<div class="chips" id="chips"></div>
+<main id="list"></main>
+
+<div id="mini">
+  <div id="miniProgress"><i></i></div>
+  <div class="tile" id="miniTile"></div>
+  <div class="rmeta" id="miniMeta">
+    <div class="rtitle" id="miniTitle"></div>
+    <div class="rsub" id="miniSub"></div>
+  </div>
+  <button class="mbtn" id="miniPrev" data-icon="prev" aria-label="前へ"></button>
+  <button class="mbtn main" id="miniPlay" aria-label="再生／停止"></button>
+  <button class="mbtn" id="miniNext" data-icon="next" aria-label="次へ"></button>
+</div>
+
+<div id="np">
+  <button class="close" id="npClose" data-icon="chevron" aria-label="閉じる"></button>
+  <div id="npGroup"></div>
+  <div id="npArt"></div>
+  <div id="npTitle"></div>
+  <div id="npSub"></div>
+  <div class="seek">
+    <input type="range" id="seek" min="0" max="1000" value="0">
+    <div class="times"><span id="tCur">0:00</span><span id="tEnd">0:00</span></div>
+  </div>
+  <div class="npcontrols">
+    <button id="btnShuffle" data-icon="shuffle" aria-label="シャッフル"></button>
+    <button id="btnPrev" data-icon="prev" aria-label="前へ"></button>
+    <button class="play" id="btnPlay" aria-label="再生／停止"></button>
+    <button id="btnNext" data-icon="next" aria-label="次へ"></button>
+    <button id="btnRepeat" data-icon="repeat" aria-label="リピート"></button>
+  </div>
+  <div class="vol"><span class="vic" data-icon="volLow"></span><input type="range" id="vol" min="0" max="100" value="100"><span class="vic" data-icon="volHigh"></span></div>
+  <div class="queuehead">再生キュー</div>
+  <div id="npQueue"></div>
+</div>
+
+<audio id="audio" preload="metadata"></audio>
+
+<script id="catalog-data" type="application/json">
+__CATALOG_JSON__
+</script>
+
+<script>
+"use strict";
+/* Inline SVG icons only — never emoji (see the note in the file header). */
+const I = {
+  play:  '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72c0 .8.87 1.3 1.56.88l10.5-6.86a1.03 1.03 0 0 0 0-1.76L9.56 4.26A1.03 1.03 0 0 0 8 5.14z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>',
+  next:  '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 6.7v10.6c0 .8.9 1.3 1.6.9l8-5.3c.6-.4.6-1.4 0-1.8l-8-5.3C6.9 5.4 6 5.9 6 6.7z"/><rect x="16.5" y="5" width="2.5" height="14" rx="1"/></svg>',
+  prev:  '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18 6.7v10.6c0 .8-.9 1.3-1.6.9l-8-5.3a1.16 1.16 0 0 1 0-1.8l8-5.3c.7-.4 1.6.1 1.6.9z"/><rect x="5" y="5" width="2.5" height="14" rx="1"/></svg>',
+  shuffle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>',
+  repeat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>',
+  chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>',
+  volLow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>',
+  volHigh: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>',
+  note: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>'
+};
+for (const el of document.querySelectorAll("[data-icon]")){
+  el.innerHTML = I[el.dataset.icon] + (el.dataset.icon === "repeat" ? '<span class="bdg">1</span>' : "");
+}
+document.getElementById("miniTile").innerHTML = I.note;
+document.getElementById("npArt").innerHTML = '<div class="np-label"><span id="npLabelText"></span></div><div class="np-hole"></div>';
+
+const CATALOG = JSON.parse(document.getElementById("catalog-data").textContent);
+const TRACKS = CATALOG.tracks || [];
+const FILTER_KEY = CATALOG.filterKey === "album" ? "album" : "artist";
+const GROUP_LABEL = FILTER_KEY === "album" ? "アルバム" : "アーティスト";
+const audio = document.getElementById("audio");
+
+const state = {
+  query: "", filter: "ALL", view: "tracks", sort: "order",
+  queue: [], pos: -1, shuffle: false, repeat: "off" // off | all | one
+};
+
+const groupOf = t => (t[FILTER_KEY] || "").trim();
+const fmt = s => { s = Math.max(0, Math.round(s || 0)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); };
+function hue(str){ let h = 0; for (const c of String(str)) h = (h*31 + c.codePointAt(0)) % 360; return h; }
+function tileHTML(t){ // gradient tile; not a real album cover
+  const h = hue(groupOf(t) || t.artist || t.title);
+  return `<div class="tile" style="background:linear-gradient(135deg,hsl(${h} 65% 45%),hsl(${(h+50)%360} 70% 30%))">${I.note}</div>`;
+}
+
+/* ---------- header ---------- */
+document.getElementById("plTitle").textContent = CATALOG.title || "プレイリスト";
+const totalDur = TRACKS.reduce((a,t)=>a+(t.duration||0),0);
+document.getElementById("plMeta").textContent = `${TRACKS.length}曲 ・ ${fmt(totalDur)}`;
+document.getElementById("viewGroups").textContent = GROUP_LABEL;
+
+/* ---------- filtering / ordering ---------- */
+function groupOrder(){
+  const seen = []; for (const t of TRACKS){ const g = groupOf(t); if (g && !seen.includes(g)) seen.push(g); } return seen;
+}
+function displayed(){
+  let list = TRACKS.map((t,i)=>({t, i}));
+  if (state.filter !== "ALL") list = list.filter(x => groupOf(x.t) === state.filter);
+  if (state.query){
+    const q = state.query.toLowerCase();
+    list = list.filter(x => (x.t.title+" "+x.t.artist+" "+(x.t.album||"")).toLowerCase().includes(q));
+  }
+  if (state.sort === "title") list.sort((a,b)=>a.t.title.localeCompare(b.t.title,"ja"));
+  else if (state.sort === "duration") list.sort((a,b)=>(a.t.duration||0)-(b.t.duration||0));
+  return list; // "order" keeps catalog order
+}
+
+/* ---------- rendering ---------- */
+const chipsEl = document.getElementById("chips");
+function renderChips(){
+  const groups = groupOrder();
+  chipsEl.innerHTML = "";
+  const mk = (label, val) => {
+    const b = document.createElement("button");
+    b.className = "chip" + (state.filter === val ? " on" : "");
+    b.textContent = label;
+    b.onclick = () => { state.filter = val; renderChips(); renderList(); };
+    chipsEl.appendChild(b);
+  };
+  mk("すべて", "ALL");
+  for (const g of groups) mk(g, g);
+}
+
+const listEl = document.getElementById("list");
+function rowHTML(x){
+  const now = state.pos >= 0 && state.queue[state.pos] === x.i;
+  const sub = x.t.album && x.t.album !== x.t.artist ? `${x.t.artist} ・ ${x.t.album}` : x.t.artist;
+  return `<button class="row${now ? " playing" : ""}" data-i="${x.i}">
+    ${tileHTML(x.t)}
+    <div class="rmeta"><div class="rtitle">${esc(x.t.title)}</div><div class="rsub">${esc(sub)}</div></div>
+    <span class="eq"><i></i><i></i><i></i></span>
+    <span class="rdur">${fmt(x.t.duration)}</span></button>`;
+}
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function renderList(){
+  const list = displayed();
+  if (!list.length){ listEl.innerHTML = `<div class="empty">見つかりませんでした</div>`; return; }
+  if (state.view === "groups" && state.sort === "order"){
+    let html = "";
+    for (const g of groupOrder()){
+      const items = list.filter(x => groupOf(x.t) === g);
+      if (!items.length) continue;
+      const gd = items.reduce((a,x)=>a+(x.t.duration||0),0);
+      html += `<div class="grouphead">${esc(g)}<span class="gsub">${items.length}曲 ・ ${fmt(gd)}</span></div>` + items.map(rowHTML).join("");
+    }
+    const nogroup = list.filter(x => !groupOf(x.t));
+    if (nogroup.length) html += nogroup.map(rowHTML).join("");
+    listEl.innerHTML = html;
+  } else {
+    listEl.innerHTML = list.map(rowHTML).join("");
+  }
+  for (const el of listEl.querySelectorAll(".row")){
+    el.onclick = () => playFromDisplayed(Number(el.dataset.i));
+  }
+}
+
+/* ---------- playback ---------- */
+function playFromDisplayed(trackIdx){
+  const order = displayed().map(x => x.i);
+  state.queue = order;
+  state.pos = order.indexOf(trackIdx);
+  loadAndPlay();
+}
+function playQueuePos(pos){
+  if (pos < 0 || pos >= state.queue.length) return;
+  state.pos = pos; loadAndPlay();
+}
+function currentTrack(){ return state.pos >= 0 ? TRACKS[state.queue[state.pos]] : null; }
+function loadAndPlay(){
+  const t = currentTrack(); if (!t) return;
+  audio.src = t.file;
+  audio.play().catch(()=>{});
+  syncPlayerUI();
+}
+function syncPlayerUI(){
+  const t = currentTrack();
+  const mini = document.getElementById("mini");
+  if (!t){ mini.classList.remove("show"); return; }
+  mini.classList.add("show");
+  const h = hue(groupOf(t) || t.artist || t.title);
+  const grad = `linear-gradient(135deg,hsl(${h} 65% 45%),hsl(${(h+50)%360} 70% 30%))`;
+  document.getElementById("miniTile").style.background = grad;
+  document.getElementById("miniTitle").textContent = t.title;
+  document.getElementById("miniSub").textContent = t.album ? `${t.artist} ・ ${t.album}` : t.artist;
+  document.getElementById("npGroup").textContent = groupOf(t) || t.artist || "";
+  document.getElementById("npLabelText").textContent = t.artist || "";
+  document.getElementById("npTitle").textContent = t.title;
+  document.getElementById("npSub").textContent = t.album ? `${t.artist} ・ ${t.album}` : t.artist;
+  document.getElementById("tEnd").textContent = fmt(t.duration);
+  renderList(); renderQueue();
+}
+function renderQueue(){
+  const q = document.getElementById("npQueue");
+  q.innerHTML = state.queue.map((ti, p) => {
+    const t = TRACKS[ti];
+    const sub = t.album ? `${t.artist} ・ ${t.album}` : t.artist;
+    const lead = p === state.pos
+      ? '<span class="eq"><i></i><i></i><i></i></span>'
+      : `<span class="qnum">${p + 1}</span>`;
+    return `<button class="qrow${p === state.pos ? " now" : ""}" data-p="${p}">
+      ${lead}
+      <div class="rmeta"><div class="rtitle">${esc(t.title)}</div><div class="rsub">${esc(sub)}</div></div>
+      <span class="rdur">${fmt(t.duration)}</span></button>`;
+  }).join("");
+  for (const el of q.querySelectorAll(".qrow")) el.onclick = () => playQueuePos(Number(el.dataset.p));
+}
+function next(auto){
+  if (!state.queue.length) return;
+  if (auto && state.repeat === "one"){ audio.currentTime = 0; audio.play().catch(()=>{}); return; }
+  let p;
+  if (state.shuffle && state.queue.length > 1){
+    do { p = Math.floor(Math.random()*state.queue.length); } while (p === state.pos);
+  } else p = state.pos + 1;
+  if (p >= state.queue.length){
+    if (state.repeat === "all") p = 0; else { if (auto){ audio.pause(); } return; }
+  }
+  playQueuePos(p);
+}
+function prev(){
+  if (audio.currentTime > 3){ audio.currentTime = 0; return; }
+  if (state.pos > 0) playQueuePos(state.pos - 1);
+}
+function togglePlay(){
+  if (!currentTrack()){ const d = displayed(); if (d.length) playFromDisplayed(d[0].i); return; }
+  if (audio.paused) audio.play().catch(()=>{}); else audio.pause();
+}
+function setPlayIcons(){
+  const s = audio.paused ? I.play : I.pause;
+  document.getElementById("miniPlay").innerHTML = s;
+  document.getElementById("btnPlay").innerHTML = s;
+  document.getElementById("npArt").classList.toggle("spin", !audio.paused);
+}
+
+/* ---------- wiring ---------- */
+document.getElementById("q").addEventListener("input", e => { state.query = e.target.value.trim(); renderList(); });
+document.getElementById("sortSel").addEventListener("change", e => { state.sort = e.target.value; renderList(); });
+const vT = document.getElementById("viewTracks"), vG = document.getElementById("viewGroups");
+vT.onclick = () => { state.view = "tracks"; vT.classList.add("on"); vG.classList.remove("on"); renderList(); };
+vG.onclick = () => { state.view = "groups"; vG.classList.add("on"); vT.classList.remove("on"); renderList(); };
+
+document.getElementById("miniPlay").onclick = togglePlay;
+document.getElementById("btnPlay").onclick = togglePlay;
+document.getElementById("miniNext").onclick = () => next(false);
+document.getElementById("btnNext").onclick = () => next(false);
+document.getElementById("miniPrev").onclick = prev;
+document.getElementById("btnPrev").onclick = prev;
+document.getElementById("miniMeta").onclick = () => document.getElementById("np").classList.add("show");
+document.getElementById("miniTile").onclick = () => document.getElementById("np").classList.add("show");
+document.getElementById("npClose").onclick = () => document.getElementById("np").classList.remove("show");
+document.getElementById("btnShuffle").onclick = e => { state.shuffle = !state.shuffle; e.currentTarget.classList.toggle("on", state.shuffle); };
+document.getElementById("btnRepeat").onclick = e => {
+  state.repeat = state.repeat === "off" ? "all" : state.repeat === "all" ? "one" : "off";
+  e.currentTarget.classList.toggle("on", state.repeat !== "off");
+  e.currentTarget.classList.toggle("one", state.repeat === "one");
+};
+document.getElementById("vol").addEventListener("input", e => { audio.volume = e.target.value/100; });
+const seekEl = document.getElementById("seek");
+let seeking = false;
+seekEl.addEventListener("input", () => { seeking = true; });
+seekEl.addEventListener("change", () => {
+  if (audio.duration) audio.currentTime = audio.duration * (seekEl.value/1000);
+  seeking = false;
+});
+audio.addEventListener("timeupdate", () => {
+  if (audio.duration && !seeking) seekEl.value = Math.round(audio.currentTime/audio.duration*1000);
+  document.getElementById("tCur").textContent = fmt(audio.currentTime);
+  const bar = document.querySelector("#miniProgress i");
+  if (bar && audio.duration) bar.style.width = (audio.currentTime/audio.duration*100) + "%";
+});
+audio.addEventListener("loadedmetadata", () => {
+  document.getElementById("tEnd").textContent = fmt(audio.duration);
+});
+audio.addEventListener("play", setPlayIcons);
+audio.addEventListener("pause", setPlayIcons);
+audio.addEventListener("ended", () => next(true));
+
+setPlayIcons();
+renderChips();
+renderList();
+</script>
+</body>
+</html>
