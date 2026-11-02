@@ -26,6 +26,8 @@ If side-effect state is uncertain, keep that operation pending and establish its
 
 ## Execute through completion
 
+When creating a macOS app, target Apple silicon only (`arm64`). Intel Macs are outside the supported scope: do not add `x86_64` builds, universal app distributions, Rosetta workflows, or Intel compatibility tests. Select arm64-compatible runtimes, native dependencies, helpers, and packaging settings. Include a bounded command-line architecture inspection of the built app and its bundled native components in the existing acceptance checks. The app must run natively on Apple silicon; report a dependency that requires Intel execution as a blocker. Do not turn a source-only fix in an existing project into an unrelated architecture migration.
+
 Set `Current:` to the next dependency-safe item, implement it, obtain its acceptance evidence, and save progress. Repeat until the authorized scope and required verification are complete. Do not finish the turn merely because coding ended, a checklist phase changed, or a test unit passed.
 
 User instructions take precedence over skill defaults. Respect user-requested phase stops, budgets, and permission limits. A legacy plan's blanket instruction to pause before all testing is a workflow default: when current user or higher-priority instructions authorize continuous execution, record that reporting change and continue. If no such direction supersedes an explicit stop in the plan, honor it. At a normal coding-to-testing transition, report progress and run the required checks without asking for renewed permission.
@@ -48,6 +50,10 @@ Correct stale completion claims when evidence disagrees and briefly explain why.
 
 ## Verify the required behavior
 
+Before verification, identify a finite set of required checks tied to the changed behavior and applicable repository requirements, with pass conditions and time limits. Reuse this set across continuation and handoff. Add a check only for an affected requirement, a concrete defect, or a relevant later change; curiosity, optional polish, and a desire for more confidence do not justify expanding the test scope. Once the set passes, stop verification and deliver the result.
+
+Do not use computer-use features for testing or verification: no AI-driven screen observation and interactive clicking, typing, or navigation in a browser or native app (including CUA). Use terminal commands, APIs, logs, and deterministic automated tests instead. Existing scripted browser/UI tests may run through a test runner with finite limits; do not replace them with an interactive AI-operated UI session.
+
 Follow the plan's acceptance conditions and repository checks with the smallest sufficient evidence. Prefer existing commands. Normally use static validation and build/type checking, a short realistic startup or critical-path smoke check, and only targeted tests needed to establish important remaining behavior. Combine overlapping checks and use focused tests during implementation when they directly prove an affected requirement.
 
 Do not write tests that merely mirror a reversible, low-impact edit. Do not add frameworks, broad fixtures, coverage targets, or test infrastructure without a concrete need. Once acceptance evidence passes, broaden or repeat checks only for new changes, failures, or unresolved requirements.
@@ -63,13 +69,21 @@ If a check is inapplicable, record why and omit it rather than marking an unrun 
 
 ### Bound output and retries
 
-Use quiet output or capture logs. Report concise success results and retrieve the smallest useful failure excerpt, expanding diagnostics only as needed. Give long-running, costly, flaky, external, or high-output checks finite time and output limits. Split expensive checks into meaningful units and checkpoint each result; a unit boundary alone does not require yielding.
+Use quiet output or capture logs. Report concise success results and retrieve the smallest useful failure excerpt, expanding diagnostics only as needed. Give every check a finite execution time limit and bound its output; do not leave watch mode, polling, or a hung process running indefinitely. Split expensive checks into meaningful units and checkpoint each result; a unit boundary alone does not require yielding.
 
-Retain the default limit of three executions per smoke or targeted-test unit: one initial execution plus two reruns after focused repairs. Count across source, configuration, fixture, or test edits and across interruptions. Honor stricter plan limits; a higher limit requires explicit user direction. Record attempts in the tracker only when needed to preserve the limit across a handoff or interruption.
+Apply a default limit of three executions per verification unit, including static checks, builds, smoke checks, and targeted tests: one initial execution plus two reruns after focused repairs. Count across source, configuration, fixture, or test edits and across interruptions. Honor stricter plan limits; a higher limit requires explicit user direction. Record attempts in the tracker only when needed to preserve the limit across a handoff or interruption.
 
-Rerun an affected check after a focused repair while budget remains. If attempts are exhausted, the same failure recurs without a new diagnosis, or further work requires disproportionate infrastructure, leave that item unchecked with the diagnostic and next action. Continue independent in-scope work; if the blocker prevents all further progress, report the exact remaining requirement. Do not rename or subdivide a failed check to reset its budget.
+Rerun an affected check after a focused repair while budget remains. If attempts are exhausted, the same failure recurs without a new diagnosis, or further work requires disproportionate infrastructure, leave that item unchecked with the diagnostic and next action. Continue independent in-scope work; if the blocker prevents all further progress, report the exact remaining requirement. Do not rename or subdivide a failed check, switch tools, or start a broader suite to reset its budget.
 
-After a repair, invalidate and rerun the affected static/build checks and any behavioral evidence made stale. Reuse passing evidence only while relevant source, configuration, dependencies, tests, and external inputs remain unchanged. Report unrelated failures without broadening the task unless they block required acceptance.
+After a repair, invalidate the affected static/build checks and any behavioral evidence made stale, and rerun them only within the remaining attempt budget. Reuse passing evidence only while relevant source, configuration, dependencies, tests, and external inputs remain unchanged. Report unrelated failures without broadening the task unless they block required acceptance.
+
+### Repeated failures and reasoning effort
+
+For the same unresolved coding or bug-fix issue, use the existing bounded verification round (at most three executions, including the initial check and post-repair reruns), not an additional allowance of three repairs. If that round fails and diagnosis or repair strategy remains uncertain, stop retrying that issue and recommend that the user raise reasoning effort by one available level. Recommend this earlier if the same failure recurs without a new diagnosis; do not consume attempts merely to reach the limit. Missing permissions, credentials, dependencies, services, or other known external prerequisites need their specific remedy, not a reasoning-effort increase.
+
+Explain the uncertainty without claiming a model limitation is proven. For example: 「The same issue has not been resolved within this attempt. It is possible that it cannot be resolved at the current reasoning level. Please increase the reasoning level by one step and instruct to continue the execution.」 Name the current and next levels only when reliably known; otherwise do not guess. Do not change settings or claim they changed yourself.
+
+Save the diagnostic, attempted approaches, attempt count, and known effort level for resumption. Continue independent authorized work. Only after the user confirms a higher level and requests resumption may the same issue receive a new bounded round, normally at most three executions; retain the cumulative history. A new message or chat alone does not reset the budget. If still unresolved, recommend the next available higher level on the same basis. At the highest available level, or without a confirmed increase, report the blocker and a concrete next diagnostic rather than retrying indefinitely. This is a settings/resumption request, not a request for the user to test the unfinished deliverable.
 
 ## Preserve resumption evidence
 
@@ -79,6 +93,8 @@ Before a non-idempotent operation, obtain the minimum appropriate duplicate-dete
 
 ## Finish honestly
 
-Declare completion only when the requested behavior and all required acceptance conditions have current evidence, including any required operational or manual checks. Set the completed tracker to `Current: Complete` and `Next: None`, and show the final checklist with a concise account of delivered behavior, changed artifacts, and verification.
+After implementation and the required automated checks are complete, include a short "Recommended operation checks (after completion)" list in the final response. Give concrete user actions and expected results for the changed behavior. Do not ask the user to operate or test the deliverable during production or make their response a prerequisite for completing the coding task. Keep these human checks outside the required implementation tracker; label them as recommendations that the agent has not performed, not as passed checks. If no meaningful human operation check applies, say so briefly. Report genuinely blocked automated checks honestly; do not use this handoff to conceal incomplete implementation.
+
+Declare the coding task complete only when the requested implementation and required agent-run acceptance checks have current evidence. Human operation checks are post-completion recommendations, not coding completion gates. When reconciling a legacy plan, move user-operated checks into that separate recommendation list while retaining their original purpose; do not claim they were executed. Set the completed tracker to `Current: Complete` and `Next: None`, and show the final checklist with a concise account of delivered behavior, changed artifacts, and verification.
 
 If a required item remains blocked or a user-requested stop is reached, save the actual state and exact next action; do not call the plan complete. If this skill itself requires a stop, identify this `SKILL.md` and quote the applicable instruction so the user can see why. Leave optional improvements clearly separate from required unfinished work.

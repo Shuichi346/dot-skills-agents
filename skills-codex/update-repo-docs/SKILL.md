@@ -1,37 +1,43 @@
 ---
 name: update-repo-docs
-description: Maintain repository-local CHANGELOG.md, NOTES.md, and AGENTS.md after implementation work. Use to record material changes, engineering decisions, and durable project instructions, or create missing repo docs. Not for README authoring or global Codex configuration.
+description: Record completed coding work in repository-local CHANGELOG.md, NOTES.md, and AGENTS.md with minimal context use. Use after fixes, additions, changes, or removals to preserve outcomes and prevent regressions in later work. Not for README authoring or global Codex configuration.
 ---
 
 # Update Repo Docs
 
-Maintain concise, factual documentation for maintainers and future coding agents. Write in English unless requested otherwise; use repository conventions for routine editorial decisions.
+Make a lightweight record immediately after coding so later work preserves fixes and intended behavior. Write in English unless requested otherwise.
 
-## Establish scope and evidence
+## Use the current task's evidence
 
-- Use the user's target directory; otherwise use the repository or worktree root, or the working directory outside Git. Read applicable project instructions and target docs.
-- A full update covers `CHANGELOG.md`, `NOTES.md`, and `AGENTS.md`. A request naming fewer files or prohibiting file creation takes precedence. Keep edits repository-local; changing shared files such as `~/.codex/AGENTS.md` requires an explicit request.
-- Inspect relevant implementation, diffs, and verification results, including committed or uncommitted work as requested. Do not attribute unrelated local changes to this task.
-- Separate implemented behavior and observed results from unresolved issues. Never invent impact or successful checks. Ask only when missing evidence materially affects scope or accuracy; otherwise complete the edits.
+- Use the user's target directory; otherwise use the repository or worktree root, or the working directory outside Git. Follow applicable project instructions. Keep edits repository-local; shared files such as `~/.codex/AGENTS.md` require an explicit request.
+- A full update considers `CHANGELOG.md`, `NOTES.md`, and `AGENTS.md`; narrower user scope takes precedence. Use completed work, decisions, and verification results already available in the conversation, including work already committed or pushed.
+- Read only the insertion area and relevant existing sections needed to avoid duplicates or contradictions. Use targeted searches and bounded excerpts for long documents. Reuse instructions and evidence already loaded.
+- Do not routinely inspect commit history, reread source code, or load entire logs and documents. If a material fact is missing, inspect only the smallest relevant diff or source excerpt. Investigate historical work only when requested. Do not reconstruct missing history or invent facts to fill an entry.
 
 ## Put information in the right document
 
-### CHANGELOG.md
+### CHANGELOG.md — what changed
 
-Record release- or milestone-level changes: user-visible behavior, public interfaces, configuration, migrations, and notable fixes. Use past tense and the existing format, adding `Unreleased` for unreleased work if needed. Do not assign release versions or dates without evidence. Omit routine cleanup and test-only changes unless their impact matters to users or maintainers.
+Record completed fixes, additions, behavior changes, and removals in past tense. Include meaningful interface, configuration, or migration changes; omit routine cleanup and test-only changes unless their impact matters.
 
-### NOTES.md
+Use `## YYYY-MM-DD` headings, newest first, with `### Fixed`, `### Added`, `### Changed`, and `### Removed` as needed. Use equivalent labels when writing in another language. Append same-day changes to the existing date and category; omit empty categories. Use the current date in the user's timezone for work just completed. For explicitly requested historical entries, use an evidenced date and ask if an essential date is unavailable.
 
-Record issues, solutions, decisions, and unresolved limitations that prevent rediscovery. Use short past-tense entries explaining the outcome or rationale. Follow existing date conventions; otherwise use the actual current date as a `YYYY-MM-DD` heading. Avoid command transcripts and session logs.
+Create new entries directly under date headings, without `Unreleased` or an assumed release version. Please retain existing past records as they are. If there are project-specific instructions, those instructions take precedence over this standard format.
 
-### AGENTS.md
+### NOTES.md — why the implementation should be preserved
 
-Record durable, repository-specific instructions in present tense or imperative voice, with actionable paths, commands, contracts, or constraints. Preserve existing rules and their scope. Do not promote one-time workarounds or unverified hypotheses into standing requirements, or duplicate global defaults and work history.
+Keep concise technical handoff notes when they help prevent recurrence or accidental reversal: the cause, chosen solution and rationale, behavior that must remain intact, or an unresolved limitation. Include relevant code paths and existing regression-test references when already known and useful; do not force a template or investigate merely to fill fields.
+
+Use dated entries following existing conventions, otherwise `YYYY-MM-DD`. Distinguish verified outcomes from unresolved issues. Do not repeat the changelog's change summary without adding useful reasoning or constraints, and avoid command transcripts or session logs.
+
+### AGENTS.md — rules for future work
+
+Record only durable, verified, repository-specific instructions in present tense or imperative voice, with actionable paths, commands, or contracts. Preserve existing rules and scope. Keep rationale in NOTES and reference the relevant section when useful. Do not turn every fix, one-time workaround, or hypothesis into a standing rule, or duplicate global defaults and work history.
 
 ## Edit and finish
 
-Preserve historical entries and document structure. Place additions according to the existing format; correct outdated current guidance only with supporting evidence. Repeat facts across documents only for distinct purposes. Leave existing files unchanged when there is nothing material to add.
+An individual change need not produce entries in all three files. Keep each fact in the document serving its purpose; use short references instead of duplicated explanations. Update outdated current guidance only with supporting evidence, preserve history, and leave files unchanged when there is nothing material to add.
 
-For a full update, create missing target files unless the user's scope or applicable repository instructions restrict creation. Use minimal starter content: `# Changelog` with `## Unreleased`, `# Notes`, and `# AGENTS.md` with a short project-instructions introduction. Add dated headings and substantive entries only when there is information to record.
+For a full update, create missing target files unless user scope or project instructions restrict creation. Use minimal starter headings: `# Changelog`, `# Notes`, and `# AGENTS.md` with a short project-instructions introduction. Add dated sections only when there is information to record.
 
-Review the final diff for factual support, duplicates, and unintended edits. Check referenced paths and commands against repository evidence, and run required documentation checks. Reuse available implementation test results; rerun code tests only if required or needed to verify an unresolved claim. Finish with a brief account of files changed, any starter-only files, and material verification limits.
+Review only the documentation diff from this update for accuracy, duplication, and unintended edits. Reuse known path, command, and test evidence; verify only unresolved references and run required documentation checks. Do not rerun implementation tests merely to record the work. Finish briefly with files changed and material evidence limits.
